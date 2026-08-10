@@ -2,6 +2,7 @@
  * safety.c —— 独立 Safety 层（§15，冻结）
  * 安全逻辑不依赖控制算法；WDT 超时 / 急停 → 直接安全关断（不经控制链）。
  */
+#include <stddef.h>
 #include "safety/safety.h"
 
 void safety_init(Safety *s)

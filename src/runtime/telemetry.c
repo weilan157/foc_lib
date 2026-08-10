@@ -2,6 +2,7 @@
  * telemetry.c —— 遥测（§4.3，冻结）
  * ~100Hz 慢数据，不阻塞 FOC；遥测在 Slow Task / Service 快照后输出。
  */
+#include <stddef.h>
 #include "runtime/telemetry.h"
 
 void telemetry_init(Telemetry *t)

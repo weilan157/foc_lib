@@ -2,6 +2,7 @@
  * stats.c —— RuntimeStats（§4.9，冻结）
  * 现场"偶尔抖一下"必须可查；diag_get_stats() 供上位机读取。
  */
+#include <stddef.h>
 #include "runtime/stats.h"
 
 void stats_init(RuntimeStats *s)

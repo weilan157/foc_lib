@@ -2,6 +2,7 @@
  * fault.c —— Fault 位图 + FaultAction 静态表（§16.1/§16.2，冻结）
  * FaultManager 只 raise/clear/classify；唯一有权 pwm_disable 的是 motor_enter_safe_state()。
  */
+#include <stddef.h>
 #include "safety/fault.h"
 
 void fault_init(FaultReg *f)

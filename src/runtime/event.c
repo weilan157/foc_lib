@@ -2,6 +2,7 @@
  * event.c —— Event 系统 SPSC 环形缓冲（§16.4，冻结）
  * 单写者（Slow/Service 统一 publish）单读者（Service/诊断 poll）；禁止多写者。
  */
+#include <stddef.h>
 #include "runtime/event.h"
 
 void event_queue_init(EventQueue *q)

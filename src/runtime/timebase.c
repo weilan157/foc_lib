@@ -2,6 +2,7 @@
  * timebase.c —— TimeBase + TimeStep（§4.5，冻结）
  * dt 必须实测（由 timestamp 差分），禁硬编码；异常 clamp 到 [0, dt_max]。
  */
+#include <stddef.h>
 #include "runtime/timebase.h"
 
 void timebase_init(TimeBase *tb, uint64_t now_us)
