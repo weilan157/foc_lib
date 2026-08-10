@@ -18,6 +18,7 @@ add_library(foc_core STATIC
     src/foc/foc_types.c
     src/foc/config.c
     src/foc/foc_math.c
+    src/foc/foc_trig.c
     src/foc/pid.c
     src/runtime/command_buffer.c
     src/runtime/setpoint.c

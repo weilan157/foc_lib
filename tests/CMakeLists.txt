@@ -3,6 +3,7 @@ set(FOC_TESTS
     test_foc_types
     test_config
     test_foc_math
+    test_foc_trig
     test_pid
     test_command_buffer
     test_setpoint

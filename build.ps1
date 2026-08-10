@@ -30,8 +30,8 @@ try {
 
     Write-Host "[1/2] gcc 编译..."
     New-Item -ItemType Directory -Force -Path build | Out-Null
-    $srcs = @("src/foc/foc_types.c", "src/foc/config.c", "src/foc/foc_math.c", "src/foc/pid.c")
-    $tests = @("test_foc_types", "test_config", "test_foc_math", "test_pid")
+    $srcs = @("src/foc/foc_types.c", "src/foc/config.c", "src/foc/foc_math.c", "src/foc/foc_trig.c", "src/foc/pid.c")
+    $tests = @("test_foc_types", "test_config", "test_foc_math", "test_foc_trig", "test_pid")
     foreach ($t in $tests) {
         & gcc -std=c11 -Wall -Wextra -Iinclude `
             "tests/algorithm/$t.c" $srcs -lm -o "build/$t.exe"

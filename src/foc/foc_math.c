@@ -6,6 +6,7 @@
  *   Park/逆Park：编码器增大 = 电角度增大；正 Iq = 正转矩
  */
 #include "foc/foc_math.h"
+#include "foc/foc_trig.h"   /* sin/cos 走 foc_sincos（查表+插值默认；CORDIC 可经 FOC_TRIG_IMPL 切换） */
 #include <math.h>
 
 #define FOC_SQRT3   (1.7320508075688772f) /* sqrt(3) */
@@ -28,8 +29,7 @@ Dq foc_park(float alpha, float beta, float theta_rad)
     float c;
     float s;
 
-    c = cosf(theta_rad);
-    s = sinf(theta_rad);
+    foc_sincos(theta_rad, &s, &c);   /* 查表+插值（默认）/ 多项式 / 硬件 CORDIC（FOC_TRIG_IMPL） */
 
     dq.d = (alpha * c) + (beta * s);
     dq.q = (-alpha * s) + (beta * c);
@@ -44,8 +44,7 @@ VoltageVector foc_inverse_park(float theta_rad, float v_zero, float v_d, float v
 
     (void)v_zero; /* V0.1 无零序注入 */
 
-    c = cosf(theta_rad);
-    s = sinf(theta_rad);
+    foc_sincos(theta_rad, &s, &c);   /* 查表+插值（默认）/ 多项式 / 硬件 CORDIC（FOC_TRIG_IMPL） */
 
     vv.alpha_v = (v_d * c) - (v_q * s);
     vv.beta_v  = (v_d * s) + (v_q * c);
