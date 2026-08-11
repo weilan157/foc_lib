@@ -1,7 +1,10 @@
 /*
  * cal_abi_align.c —— ABZ 相位校准实现（方向检测 + 相位对齐）
  *
- * 流程：拉起点 → 正转一圈判定方向 → 回固定矢量对齐 → 反推 encoder_zero → 去磁复位。
+ * 流程：拉起点 → 正转一圈判定方向 → 回固定 d 轴矢量对齐 → 反推 encoder_zero → 去磁复位。
+ *
+ * 对齐必须用 Vd（vq=0）：逆 Park 后电压矢量角 = θ，转子磁链轴跟到 θ。
+ * 若误用 Vq，矢量在 θ+π/2，encoder_zero 系统性偏 90° → 闭环 d/q 错轴、乱转过流。
  */
 #include "control/cal_abi_align.h"
 #include "foc_types.h"
@@ -37,8 +40,9 @@ int cal_abi_align_phase(void *ctx)
     if (c->min_move_rad <= 0.0f) { c->min_move_rad = 0.05f; }
     if (c->pp_tol <= 0.0f)       { c->pp_tol = 0.05f; }
 
-    vd = 0.0f;
-    vq = c->align_voltage;
+    vd = c->align_voltage;
+    vq = 0.0f;   /* d 轴对齐（ODrive/SimpleFOC/VESC）：电压矢量角 = θ，转子 d 轴跟到 θ。
+                    切勿用 Vq：逆 Park 后矢量在 θ+π/2，zero 会偏 90° → 闭环乱转/过流烧线。 */
 
     /* ① 拉到对齐起点，建立基准 */
     (void)c->set_elec_voltage(c->hw, c->align_theta_rad, vd, vq);

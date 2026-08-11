@@ -189,9 +189,9 @@ static int cli_cmd_status(DebugCli *c, const char *arg)
 {
     MotorRuntime *rt = c->rt;
     (void)arg;
-    cli_printf(c, "state=%s mode=%s ts=%llu\n",
+    cli_printf(c, "state=%s mode=%s ts=%lu\n",
                cli_state_name(rt->state), cli_mode_name(command_buffer_get_mode(&rt->cmd_buf)),
-               (unsigned long long)rt->timestamp);
+               (unsigned long)rt->timestamp);
     cli_printf(c, "loop=%u max_exec_us=%u overrun=%u min_dt=%u max_dt=%u\n",
                rt->stats.loop_count, rt->stats.max_exec_us, rt->stats.overrun_count,
                rt->stats.min_dt_us, rt->stats.max_dt_us);
@@ -238,9 +238,9 @@ static int cli_cmd_dump(DebugCli *c, const char *arg)
     }
 
     cli_puts(c, "== status ==\n");
-    cli_printf(c, "state=%s mode=%s ts=%llu\n",
+    cli_printf(c, "state=%s mode=%s ts=%lu\n",
                cli_state_name(rt->state), cli_mode_name(command_buffer_get_mode(&rt->cmd_buf)),
-               (unsigned long long)rt->timestamp);
+               (unsigned long)rt->timestamp);
     cli_printf(c, "loop=%u overrun=%u max_exec_us=%u\n",
                rt->stats.loop_count, rt->stats.overrun_count, rt->stats.max_exec_us);
     if (rt->tel != NULL) {
@@ -460,8 +460,8 @@ void debug_cli_stream_tick(DebugCli *c)
     c->stream_seq++;
 
     (void)feedback_buffer_read(&rt->fb_buf, &fb);
-    cli_printf(c, "%llu,%.6f,%.4f,%.4f,%u,%.1f,%.1f,%lu\n",
-               (unsigned long long)rt->timestamp,
+    cli_printf(c, "%lu,%.6f,%.4f,%.4f,%u,%.1f,%.1f,%lu\n",
+               (unsigned long)rt->timestamp,
                (double)fb.mech_angle_rad, (double)fb.mech_vel_radps, (double)fb.elec_angle_rad,
                (unsigned)rt->state,
                (rt->tel != NULL) ? (double)rt->tel->temperature_c : 0.0,

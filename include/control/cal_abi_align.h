@@ -8,7 +8,7 @@
  *      （电角度 = mech·pp + zero → zero = θ_align − mech_eff·pp，mech_eff 含 inverted 校正）
  *
  * 依赖注入（board 提供回调；测试注入 fake）：
- *   - set_elec_voltage(hw, theta_el, vd, vq)：施加 dq 电压（V0.1 电压模式：vd≈0, vq=align_voltage）
+ *   - set_elec_voltage(hw, theta_el, vd, vq)：施加 dq 电压（对齐用 vd=align_voltage, vq=0）
  *   - get_mech_angle(hw, &mech_rad)：读当前机械角（编码器原始读数，未含 inverted）
  *   - wait_ms(hw, ms)：阻塞等待（RTOS delay / 空转；校准在非实时上下文执行）
  *

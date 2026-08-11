@@ -25,11 +25,23 @@ int current_sense_init(void *ctx)
     c->last_ib = 0.0f;
     c->last_ic = 0.0f;
     c->overcurrent_count = 0u;
+    c->oc_blank_remaining = 0u;
     c->read_count = 0u;
     c->err_count_total = 0u;
     c->err_rate = 0.0f;
+    c->trip_ia = 0.0f;
+    c->trip_ib = 0.0f;
+    c->trip_ic = 0.0f;
     c->quality = ENC_QUALITY_GOOD;
     return FOC_OK;
+}
+
+void current_sense_set_oc_blank(void *ctx, uint32_t blank_cycles)
+{
+    CurrentSenseCtx *c = (CurrentSenseCtx *)ctx;
+    if (c == NULL) { return; }
+    c->oc_blank_remaining = blank_cycles;
+    c->overcurrent_count = 0u;   /* 清防抖，避免 blank 前残留计数立刻跳闸 */
 }
 
 static bool cs_overcurrent(CurrentSenseCtx *c, float ia, float ib, float ic)
@@ -67,6 +79,26 @@ int current_sense_reconstruct(void *ctx, SampleFrame *sf)
     ic = (raw_c - c->offset_c) * c->gain_c;
 
     if (cs_overcurrent(c, ia, ib, ic)) {
+        c->trip_ia = ia;                             /* 记录跳闸瞬间（含 blank 期间尖峰） */
+        c->trip_ib = ib;
+        c->trip_ic = ic;
+        if (c->oc_blank_remaining > 0u) {
+            c->oc_blank_remaining--;
+            c->overcurrent_count = 0u;               /* blank 内不累计防抖 */
+            /* 仍输出测量值供环路用（限幅到阈值，防 PI 吃尖峰） */
+            {
+                float lim = c->max_current;
+                if (ia >  lim) { ia =  lim; } else if (ia < -lim) { ia = -lim; }
+                if (ib >  lim) { ib =  lim; } else if (ib < -lim) { ib = -lim; }
+                if (ic >  lim) { ic =  lim; } else if (ic < -lim) { ic = -lim; }
+            }
+            c->last_ia = ia; c->last_ib = ib; c->last_ic = ic;
+            c->quality = ENC_QUALITY_GOOD;
+            sf->ia = ia; sf->ib = ib; sf->ic = ic;
+            sf->timestamp_us = now_us;
+            sf->cycle = c->read_count;
+            return FOC_OK;
+        }
         c->overcurrent_count++;
         if (c->overcurrent_count >= c->overcurrent_limit) {
             c->err_count_total++;
@@ -79,6 +111,7 @@ int current_sense_reconstruct(void *ctx, SampleFrame *sf)
     }
 
     /* 正常 */
+    if (c->oc_blank_remaining > 0u) { c->oc_blank_remaining--; }
     c->overcurrent_count = 0u;
     c->quality = ENC_QUALITY_GOOD;
     c->err_rate = (float)c->err_count_total / (float)c->read_count;

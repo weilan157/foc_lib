@@ -49,12 +49,6 @@ void current_controller_init_ctx(CurrentControllerCtx *ctx)
     ctx->last_vd = 0.0f;
 }
 
-static int cc_init(void *ctx)
-{
-    current_controller_init_ctx((CurrentControllerCtx *)ctx);
-    return FOC_OK;
-}
-
 static int cc_reset(void *ctx)
 {
     CurrentControllerCtx *c = (CurrentControllerCtx *)ctx;
@@ -67,6 +61,13 @@ static int cc_reset(void *ctx)
     c->last_velocity_target = 0.0f;
     c->first_fast = true;
     return FOC_OK;
+}
+
+static int cc_init(void *ctx)
+{
+    /* 只复位运行态，保留 board 已写入的 R/L/v_limit/max_current 等配置。
+       若此处调 current_controller_init_ctx，会把 v_limit 打回 24，限压失效（IQ 虚高）。 */
+    return cc_reset(ctx);
 }
 
 static int cc_on_enter(void *ctx, ControlMode mode)
@@ -209,13 +210,32 @@ static int cc_step_fast(void *ctx, const FastFeedback *fb, const ControlSetpoint
     dec_q =  we * c->phase_inductance * id_sp;     /* vq += ωe·L·id */
     ff_q  =  c->flux_linkage * we;                 /* vq += ke·ωe（BEMF 前馈） */
 
-    /* 电流 PI（+ 前馈 + 解耦） */
-    vq = ierr_q * kp + c->vq_integral + ff_q + dec_q;
-    vd = ierr_d * kp + c->vd_integral + dec_d;
+    /* 电流 PI（+ 前馈 + 解耦）→ 再钳到 v_limit（否则 BEMF/积分可到几十 V，IQ 误导且抬限后会猛冲） */
+    {
+        float lim = (c->v_limit > 1e-3f) ? c->v_limit : 1.0f;
+        float vq_raw, vd_raw;
+        int   sat_q, sat_d;
 
-    /* 积分（输出限幅防 windup：|v| 达限冻结积分） */
-    if (fabsf(vq) < c->v_limit) { c->vq_integral += ierr_q * ki * dt; }
-    if (fabsf(vd) < c->v_limit) { c->vd_integral += ierr_d * ki * dt; }
+        vq_raw = ierr_q * kp + c->vq_integral + ff_q + dec_q;
+        vd_raw = ierr_d * kp + c->vd_integral + dec_d;
+
+        sat_q = (vq_raw > lim) || (vq_raw < -lim);
+        sat_d = (vd_raw > lim) || (vd_raw < -lim);
+        vq = (vq_raw > lim) ? lim : ((vq_raw < -lim) ? -lim : vq_raw);
+        vd = (vd_raw > lim) ? lim : ((vd_raw < -lim) ? -lim : vd_raw);
+
+        /* 条件积分：未饱和，或误差使输出离开饱和方向时才积分 */
+        if ((sat_q == 0) || ((ierr_q * vq_raw) < 0.0f)) {
+            c->vq_integral += ierr_q * ki * dt;
+        }
+        if ((sat_d == 0) || ((ierr_d * vd_raw) < 0.0f)) {
+            c->vd_integral += ierr_d * ki * dt;
+        }
+        if (c->vq_integral >  lim) { c->vq_integral =  lim; }
+        else if (c->vq_integral < -lim) { c->vq_integral = -lim; }
+        if (c->vd_integral >  lim) { c->vd_integral =  lim; }
+        else if (c->vd_integral < -lim) { c->vd_integral = -lim; }
+    }
 
     out->voltage_q = vq;
     out->voltage_d = vd;

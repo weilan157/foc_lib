@@ -36,9 +36,11 @@ typedef struct {
     float offset_a, offset_b, offset_c; /* 零点 [V]（零电流时采样值，校准得） */
     float max_current;                  /* 过流阈值 [A]（0=禁用检测） */
     uint32_t overcurrent_limit;         /* 连续过流多少次 → BAD（防抖；0 视为 1） */
+    uint32_t oc_blank_remaining;        /* >0 时过流不报错（enable 后 blanking，防开关噪声误跳） */
 
     /* 内部状态（外部只读） */
     float      last_ia, last_ib, last_ic;  /* 最近 GOOD 相电流 [A] */
+    float      trip_ia, trip_ib, trip_ic;  /* 最近一次过流跳闸时的相电流 [A] */
     uint32_t   overcurrent_count;
     uint32_t   read_count;                 /* 总读取次数 */
     uint32_t   err_count_total;            /* 累计失效次数（错误率） */
@@ -51,6 +53,8 @@ typedef struct {
  * 读取失败 → BAD。正常 → GOOD，返回 FOC_OK。 */
 int current_sense_reconstruct(void *ctx, SampleFrame *sf);
 int current_sense_init(void *ctx);
+/* enable 后调用：忽略过流 blank_cycles 拍（10kHz 下 200≈20ms） */
+void current_sense_set_oc_blank(void *ctx, uint32_t blank_cycles);
 
 #ifdef __cplusplus
 }
