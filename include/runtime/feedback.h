@@ -26,6 +26,7 @@ typedef struct {
     float           mech_angle_rad;   /* 机械角 [rad] */
     float           mech_vel_radps;   /* 机械角速度 [rad/s] */
     float           elec_angle_rad;   /* 电角度 [rad]（由 mech + pole_pairs + encoder_zero 派生） */
+    float           ia, ib;           /* 相电流 [A]（V0.2 电流环：CurrentSense → SampleFrame） */
     FeedbackQuality quality;          /* 必须带 quality */
 } FastFeedback;
 

@@ -646,6 +646,8 @@ typedef struct { const PositionSensorOps *ops; void *ctx; } PositionSensor;
 
 ### 7.3 CurrentSense（相电流重构 → SampleFrame，V0.2）
 
+> ✅ **已实现（V0.2）**：`device/current_sense.h/.c` —— 总线无关（HwOps{read_phase_raw, get_tick_us} 由 board 注入），零点/增益校准（`(raw−offset)·gain`，对照 SimpleFOC InlineCurrentSense），连续过流 → `BAD` 禁置 0。
+
 ```c
 /* device/current_sense.h */
 typedef struct {
@@ -905,6 +907,8 @@ Position → Velocity → iq_sp → Current PI → Voltage → SVPWM
 ```
 - 升级 = 在 Voltage 前插入 `iq_sp + Current PI` 中间节点，**不推翻架构**；
 - 新增 `RealtimeTorqueBuffer` / 电流采样按 V0.2 冻结（§4.4）。
+
+> ✅ **已实现（V0.2）**：`control/current_controller.h/.c`（dq 电流 PI + BEMF 前馈 + 交叉解耦 + 带宽自动推导，对照 ODrive/SimpleFOC/VESC），`MotorRuntimeConfig` 增 `current_kp/ki/bandwidth/filter`，`FastFeedback.ia/ib` 承载电流采样；`control/cal_current.h/.c`（电流零点校准，CalibrationOps.current）。
 
 ### 10.3 MotorRuntime（V0.1.6：经 HardwareAdapter，不含硬件指针）
 
@@ -1477,6 +1481,9 @@ foc_lib/
   - `test_limit_table.c`：按模式 `limit[MODE]` 限幅
   - `test_config_snapshot.c`：RuntimeConfig 在线修改 → Snapshot 切换生效
   - `test_simulation.c`：motor_model + FOC 闭环收敛
+  - `test_current_loop.c`：电流环闭环收敛（R-L 模型，iq→iq_sp）
+  - `test_current_sense.c` / `test_current_controller.c` / `test_cal_current.c`：电流感测 / dq 电流 PI / 电流零点校准
+  - `test_debug_cli.c`：调试 CLI Service（参数/命令/数据/波形）
   - `test_dependency.c`：头文件依赖方向检查
 - 工具：原生 C 编译（CTest / Unity），CI 可跑。
 
@@ -1511,7 +1518,7 @@ foc_lib/
 | **实现阶段 ①** | **写第一版 STM32G4 reference implementation**：TIM1 PWM + ADC injected + ABZ Encoder + FOC voltage mode + Velocity PI 跑通（HAL + Board + Motor 实例打穿架构） |
 | **实现阶段 ②** | **fake HAL + motor model + PC 单元测试**（CI 通过） |
 | **实现阶段 ③** | **真实电机跑通闭环**（电压模式） |
-| **V0.2** | STM32G4 落地（ADC DMA / TIM1 FOC / SPI Encoder / CAN）+ **参数迁移 `parameter_migrate()`、DTC 故障码、RuntimeStats 细化、fake_adc/fake_encoder/fake_driver** + 电流采样/电流 PI + `RealtimeTorqueBuffer`（若需要） |
+| **V0.2** | STM32G4 落地（ADC DMA / TIM1 FOC / SPI Encoder / CAN）+ **参数迁移 `parameter_migrate()`、DTC 故障码、RuntimeStats 细化、fake_adc/fake_encoder/fake_driver** + `RealtimeTorqueBuffer`（若需要）。（**已实现**：电流采样/电流 PI —— `device/current_sense` + `control/current_controller` + `cal_current`，16 测试 339 checks 全绿） |
 | **V0.3** | Observer（届时才抽象）、EtherCAT、Impedance Control |
 | V0.4 | 前馈增强、轨迹规划、硬件保护（比较器+BKIN） |
 | V0.5 | 多轴同步（AxisGroup）、诊断扩展 |

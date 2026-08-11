@@ -20,6 +20,10 @@ add_library(foc_core STATIC
     src/foc/foc_math.c
     src/foc/foc_trig.c
     src/foc/pid.c
+    src/device/encoder/encoder.c
+    src/device/encoder/enc_abi.c
+    src/device/encoder/enc_abs.c
+    src/device/current_sense.c
     src/runtime/command_buffer.c
     src/runtime/setpoint.c
     src/runtime/feedback.c
@@ -30,12 +34,19 @@ add_library(foc_core STATIC
     src/runtime/event.c
     src/runtime/telemetry.c
     src/control/pid_controller.c
+    src/control/cal_abi_align.c
+    src/control/cal_abi_find_index.c
+    src/control/current_controller.c
+    src/control/cal_current.c
     src/safety/fault.c
     src/safety/fault_monitor.c
     src/safety/safety.c
     src/core/motor_runtime.c
+    src/service/debug_cli.c
     tests/simulation/motor_model.c
     tests/simulation/hw_adapter_sim.c
+    tests/simulation/abz_board.c
+    tests/simulation/abs_board.c
 )
 target_include_directories(foc_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include

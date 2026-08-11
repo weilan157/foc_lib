@@ -6,6 +6,17 @@ set(FOC_TESTS
     algorithm:test_foc_math
     algorithm:test_foc_trig
     algorithm:test_pid
+    algorithm:test_cal_abi_align
+    algorithm:test_cal_abi_find_index
+    algorithm:test_abz_board
+    algorithm:test_abs_board
+    algorithm:test_enc_abi
+    algorithm:test_enc_abs
+    service:test_debug_cli
+    algorithm:test_current_sense
+    algorithm:test_cal_current
+    algorithm:test_current_controller
+    algorithm:test_current_loop
     runtime:test_command_buffer
     runtime:test_setpoint
     runtime:test_feedback

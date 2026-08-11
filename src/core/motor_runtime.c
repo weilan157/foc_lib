@@ -48,9 +48,9 @@ int motor_init(MotorRuntime *rt, uint32_t idx, const MotorStaticConfig *scfg,
     rt->controller.ctx = ctrl_ctx;
     if (rt->controller.ops->init != NULL) { (void)rt->controller.ops->init(rt->controller.ctx); }
 
-    /* 校准插件 */
+    /* 校准插件（ctx 由 board 注入，§9.2：phase/encoder 校准插件使用） */
     rt->calibration = (cal_ops != NULL) ? *cal_ops : (CalibrationOps){ 0 };
-    (void)cal_ctx;
+    rt->cal_ctx     = cal_ctx;
 
     fault_monitor_init(&rt->fault_monitor);
     stats_init(&rt->stats);
@@ -89,8 +89,9 @@ int motor_calibrate(MotorRuntime *rt)
     if (rt == NULL) { return FOC_ERROR; }
     if (rt->state != FOC_STATE_CALIBRATION) { return FOC_ERROR; }
 
-    if (rt->calibration.encoder != NULL) { (void)rt->calibration.encoder(NULL); }
-    if (rt->calibration.phase    != NULL) { (void)rt->calibration.phase(NULL); }
+    if (rt->calibration.encoder != NULL) { (void)rt->calibration.encoder(rt->cal_ctx); }
+    if (rt->calibration.phase    != NULL) { (void)rt->calibration.phase(rt->cal_ctx); }
+    if (rt->calibration.current  != NULL) { (void)rt->calibration.current(rt->cal_ctx); }
 
     rt->state = FOC_STATE_READY;
     return FOC_OK;
@@ -247,6 +248,21 @@ void motor_fast_step(MotorRuntime *rt, const TimeBase *tb)
     fb.elec_angle_rad = foc_calc_elec_angle(enc.mech_angle_rad, rt->scfg->pole_pairs,
                                             rt->calib.encoder_zero);
     fb.quality = (enc.quality == ENC_QUALITY_GOOD) ? FEEDBACK_OK : FEEDBACK_STALE;
+
+    /* 2a. 相电流采样（V0.2 电流环）：HwAdapter 提供 current_reconstruct 时采样；
+           失败/过流 → FAULT_OVERCURRENT（禁止置 angle=0 同款原则：禁置电流 0） */
+    if (rt->hw.ops->current_reconstruct != NULL) {
+        SampleFrame frame;
+        if (rt->hw.ops->current_reconstruct(rt->hw.ctx, &frame) != FOC_OK) {
+            motor_enter_safe_state(rt, FAULT_OVERCURRENT);
+            return;
+        }
+        fb.ia = frame.ia;
+        fb.ib = frame.ib;
+    } else {
+        fb.ia = 0.0f;
+        fb.ib = 0.0f;
+    }
 
     /* 3. 读 fast 设定值（Slow 产出，保持型） */
     (void)setpoint_read(&rt->sp_buf, &sp);

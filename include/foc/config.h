@@ -60,10 +60,15 @@ typedef struct {
 /* ---- 运行时可在线修改：必须经 ConfigSnapshot 生效 ---- */
 typedef struct {
     CommandLimitTable limits;     /* 运行期生效的限幅表（初始复制自 scfg->limits，在线可改） */
-    /* PID 增益（V0.1 预留；V0.2 细化） */
+    /* PID 增益（V0.1：位置/速度环；V0.2 电流环见下） */
     float kp;
     float ki;
     float kd;
+    /* 电流环（V0.2，对照 ODrive current_control_bandwidth / SimpleFOC bandwidth） */
+    float current_kp;            /* 电流环 P 增益 [V/A]（0 → 由带宽推导 kp=bw·L） */
+    float current_ki;            /* 电流环 I 增益 [V/A/s]（0 → 由带宽推导 ki=bw·R） */
+    float current_bandwidth_hz;  /* 电流环带宽 [Hz]（推导 kp/ki 用；R/L 在 MotorStaticConfig） */
+    float current_filter_hz;     /* 电流测量低通 [Hz]（0=禁用） */
 } MotorRuntimeConfig;
 
 /* ---- 校准自动产生（只读） ---- */

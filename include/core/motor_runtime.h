@@ -50,6 +50,7 @@ typedef struct {
 
     Controller         controller;
     CalibrationOps     calibration;
+    void              *cal_ctx;        /* 校准插件上下文（board 注入，§9.2） */
     Safety             safety;         /* 独立安全层（§15） */
 
     CommandBuffer      cmd_buf;        /* 命令唯一来源 */

@@ -30,8 +30,9 @@ try {
 
     Write-Host "[1/2] gcc 编译..."
     New-Item -ItemType Directory -Force -Path build | Out-Null
-    $srcs = @("src/foc/foc_types.c", "src/foc/config.c", "src/foc/foc_math.c", "src/foc/foc_trig.c", "src/foc/pid.c")
-    $tests = @("test_foc_types", "test_config", "test_foc_math", "test_foc_trig", "test_pid")
+    $srcs = @((Get-ChildItem src -Recurse -Filter *.c | ForEach-Object { $_.FullName })
+        + @("tests/simulation/abz_board.c", "tests/simulation/abs_board.c"))
+    $tests = @("test_foc_types", "test_config", "test_foc_math", "test_foc_trig", "test_pid", "test_cal_abi_align", "test_cal_abi_find_index", "test_abz_board", "test_abs_board", "test_enc_abi", "test_enc_abs", "test_debug_cli", "test_current_sense", "test_cal_current", "test_current_controller", "test_current_loop")
     foreach ($t in $tests) {
         & gcc -std=c11 -Wall -Wextra -Iinclude `
             "tests/algorithm/$t.c" $srcs -lm -o "build/$t.exe"
