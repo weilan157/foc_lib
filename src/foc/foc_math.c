@@ -10,6 +10,7 @@
 #include <math.h>
 
 #define FOC_SQRT3   (1.7320508075688772f) /* sqrt(3) */
+#define FOC_INV_SQRT3 (0.5773502691896258f) /* 1/sqrt(3)：乘法替代除法（Fast Loop 热点） */
 #define FOC_TWO_PI  (6.283185307179586f)
 
 AlphaBeta foc_clarke(float ia, float ib, float ic)
@@ -19,7 +20,7 @@ AlphaBeta foc_clarke(float ia, float ib, float ic)
 
     /* alpha = ia；beta = (ia + 2*ib)/sqrt(3)（由 ic = -ia-ib 代入标准 Clarke 得） */
     ab.alpha = ia;
-    ab.beta  = (ia + (2.0f * ib)) / FOC_SQRT3;
+    ab.beta  = (ia + (2.0f * ib)) * FOC_INV_SQRT3;
     return ab;
 }
 
@@ -63,11 +64,15 @@ float foc_calc_elec_angle(float mech_angle_rad, uint32_t pole_pairs, float encod
 
 float foc_wrap_pi(float a)
 {
-    float r = fmodf(a, FOC_TWO_PI);
-    if (r >= (float)M_PI) {
-        r -= FOC_TWO_PI;
-    } else if (r < -(float)M_PI) {
-        r += FOC_TWO_PI;
+    /* 快速 wrap 到 [-π, π)：乘 1/2π + float→int 截断取圈数（FPU 单条 vcvt 指令），
+       替代 fmodf（无硬件指令、软件循环数百周期，20kHz Fast Loop 的性能杀手）。
+       角度圈数有限（< 1e6 圈，int32 不会溢出）；截断向零，负角度下同样正确。 */
+    float n = (float)(int32_t)(a * (1.0f / FOC_TWO_PI));
+    a -= n * FOC_TWO_PI;
+    if (a >= (float)M_PI) {
+        a -= FOC_TWO_PI;
+    } else if (a < -(float)M_PI) {
+        a += FOC_TWO_PI;
     }
-    return r;
+    return a;
 }

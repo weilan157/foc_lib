@@ -79,6 +79,11 @@ int motor_recover(MotorRuntime *rt);
 void motor_slow_step(MotorRuntime *rt, const TimeBase *tb);   /* 1kHz：位置/速度环 */
 void motor_fast_step(MotorRuntime *rt, const TimeBase *tb);   /* 20kHz：电压环 + FOC */
 
+/* 执行预算检查（§4.8.1 硬约束）：board 的 FOC Task 测完 fast_step 执行时间后调用；
+   记账 max_exec_us / overrun_count，超预算 → FAULT_CONTROL_OVERRUN
+   （防止高优先级 fast loop 饿死低优先级 Service/CLI 任务——串口不响应的典型根因） */
+void motor_fast_loop_budget(MotorRuntime *rt, uint32_t exec_us, uint32_t budget_us);
+
 /* 安全关断唯一出口（§16.1，冻结）：FaultManager 禁止直接操作 PWM */
 void motor_enter_safe_state(MotorRuntime *rt, FaultCode code);
 

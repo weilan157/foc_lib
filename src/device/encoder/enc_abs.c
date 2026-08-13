@@ -30,6 +30,8 @@ int enc_abs_init(void *ctx)
     }
 
     c->last_raw        = 0u;
+    c->half_res        = c->resolution / 2u;                 /* 预计算（Fast Loop 性能） */
+    c->scale           = ENC_ABS_TWO_PI / (float)c->resolution;
     c->data_err_count  = 0u;
     c->update_count    = 0u;
     c->err_count_total = 0u;
@@ -114,7 +116,7 @@ int enc_abs_update(void *ctx)
 
     /* 多圈连续机械角（可超 2π） */
     angle_total = (float)turns * ENC_ABS_TWO_PI
-                + ENC_ABS_TWO_PI * (float)raw_ang / (float)c->resolution;
+                + (float)raw_ang * c->scale;
 
     /* 首次：只建基准（不产出位移/速度） */
     if (c->first) {
@@ -135,7 +137,7 @@ int enc_abs_update(void *ctx)
        raw_ang 已含 inverted 取反，故差分符号自然正确。 */
     {
         int32_t d_raw = (int32_t)raw_ang - (int32_t)c->last_raw;
-        int32_t half  = (int32_t)(c->resolution / 2u);
+        int32_t half  = (int32_t)c->half_res;
         int32_t d_turns;
         float d_angle;
 
@@ -147,7 +149,7 @@ int enc_abs_update(void *ctx)
 
         d_turns = turns - c->last_turn;
 
-        d_angle = ENC_ABS_TWO_PI * ((float)d_raw / (float)c->resolution + (float)d_turns);
+        d_angle = (float)d_raw * c->scale + (float)d_turns * ENC_ABS_TWO_PI;
 
         if (c->use_pll) {
             /* PLL 平滑（ODrive 式临界阻尼，位置源为多圈连续角度） */

@@ -44,6 +44,8 @@ typedef struct {
     /* 内部状态（外部只读） */
     int64_t    total_count;  /* 累计计数（含圈数，可负） */
     int32_t    last_count;
+    int32_t    half_cpr;     /* 预计算 cpr/2（环绕修正，避免每周期整数除法） */
+    float      scale;        /* 预计算 2π/cpr（角度换算，乘法替代浮点除法） */
     float      last_angle_rad;
     float      velocity;     /* [rad/s]（一阶差分；use_pll 时不用） */
     uint64_t   last_tick_us;

@@ -290,3 +290,15 @@ void motor_fast_step(MotorRuntime *rt, const TimeBase *tb)
     stats_update(&rt->stats, tb);
     rt->timestamp = tb->timestamp_us;
 }
+
+/* 执行预算检查（§4.8.1）：board FOC Task 任务头测完执行时间后调用。
+   例：t0=hal_tick(); motor_fast_step(...); t1=hal_tick();
+       motor_fast_loop_budget(rt, t1-t0, FAST_BUDGET_US); */
+void motor_fast_loop_budget(MotorRuntime *rt, uint32_t exec_us, uint32_t budget_us)
+{
+    if (rt == NULL) { return; }
+    stats_update_exec(&rt->stats, exec_us, budget_us);
+    if (exec_us > budget_us) {
+        motor_enter_safe_state(rt, FAULT_CONTROL_OVERRUN);
+    }
+}

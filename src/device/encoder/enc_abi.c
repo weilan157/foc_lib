@@ -8,18 +8,17 @@
 #define ENC_ABI_TWO_PI  (6.283185307179586f)
 #define ENC_ABI_DT_MAX  (1000000u)   /* 1s：异常 dt 过滤 */
 
-/* 环绕安全的增量：|delta| > cpr/2 视为跨零环绕，修正到 ±cpr/2 内 */
-static int32_t enc_abi_delta(int32_t cur, int32_t prev, uint32_t cpr)
+/* 环绕安全的增量：|delta| > cpr/2 视为跨零环绕，修正到 ±cpr/2 内。
+   half/cpr 由调用方预计算传入（避免每周期整数除法） */
+static int32_t enc_abi_delta(int32_t cur, int32_t prev, int32_t half, int32_t cpr)
 {
     int32_t d;
-    int32_t half;
 
     d = cur - prev;
-    half = (int32_t)(cpr / 2u);
     if (d > half) {
-        d -= (int32_t)cpr;
+        d -= cpr;
     } else if (d < -half) {
-        d += (int32_t)cpr;
+        d += cpr;
     }
     return d;
 }
@@ -43,6 +42,10 @@ int enc_abi_init(void *ctx)
     c->index_found    = !c->use_index;   /* 不用 index 则直接可用 */
     c->first          = true;
     c->quality        = ENC_QUALITY_GOOD;
+
+    /* 预计算（Fast Loop 性能：cpr 不变，避免每周期整数/浮点除法） */
+    c->half_cpr = (int32_t)(c->cpr / 2u);
+    c->scale    = ENC_ABI_TWO_PI / (float)c->cpr;
 
     /* PLL 初始化（ODrive 式：kp=2·bw，ki=0.25·kp²，临界阻尼） */
     c->pll_pos   = 0.0f;
@@ -78,7 +81,7 @@ int enc_abi_update(void *ctx)
     }
 
     if (!c->first) {
-        c->total_count += (int64_t)enc_abi_delta(count, c->last_count, c->cpr);
+        c->total_count += (int64_t)enc_abi_delta(count, c->last_count, c->half_cpr, (int32_t)c->cpr);
     }
     c->last_count = count;
     c->first = false;
@@ -92,12 +95,12 @@ int enc_abi_update(void *ctx)
             /* 每转：归一到最近整圈；平移 last_angle 防速度尖峰 */
             int64_t aligned;
             aligned = (int64_t)llroundf((float)c->total_count / (float)c->cpr) * (int64_t)c->cpr;
-            c->last_angle_rad += (float)(aligned - c->total_count) * ENC_ABI_TWO_PI / (float)c->cpr;
+            c->last_angle_rad += (float)(aligned - c->total_count) * c->scale;
             c->total_count = aligned;
         }
     }
 
-    angle = ENC_ABI_TWO_PI * (float)c->total_count / (float)c->cpr;
+    angle = (float)c->total_count * c->scale;
 
     /* 位置/速度：可选 PLL（ODrive 式临界阻尼）vs 一阶差分 */
     if (c->use_pll) {

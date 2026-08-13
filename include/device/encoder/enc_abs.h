@@ -50,6 +50,8 @@ typedef struct {
 
     /* 内部状态（外部只读） */
     uint32_t last_raw;        /* 最近一次 GOOD 的单圈原始值 [0, resolution) */
+    uint32_t half_res;        /* 预计算 resolution/2（环绕修正，避免每周期整数除法） */
+    float    scale;           /* 预计算 2π/resolution（角度换算，乘法替代浮点除法） */
     uint32_t data_err_count;  /* 连续无效计数 */
     uint32_t update_count;    /* 累计读取次数（含有效/无效，错误率统计用） */
     uint32_t err_count_total; /* 累计无效次数（对照 VESC encoder_get_error_rate） */

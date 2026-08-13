@@ -27,15 +27,16 @@
 #define FOC_TRIG_QUARTER   (1.5707963267948966f)  /* pi/2 */
 #define FOC_TRIG_TWO_PI    (6.283185307179586f)   /* 2*pi */
 
-/* 归约到 [0, 2π)：小角度（FOC 常态，theta 已 wrap 到 ±π）走条件分支，大角度才 fmodf */
+/* 归约到 [0, 2π)：小角度（FOC 常态，theta 已 wrap 到 ±π）走条件分支直接通过；
+   跨零/大角度用 1/2π 乘法 + float→int 截断取圈数（FPU vcvt，快），
+   替代 fmodf（无硬件指令、软件循环数百周期，Fast Loop 性能杀手）。 */
 static float foc_trig_reduce(float th)
 {
     float a = th;
 
-    if (a >= FOC_TRIG_TWO_PI) {
-        a = fmodf(a, FOC_TRIG_TWO_PI);
-    } else if (a < 0.0f) {
-        a = fmodf(a, FOC_TRIG_TWO_PI);
+    if ((a >= FOC_TRIG_TWO_PI) || (a < 0.0f)) {
+        float n = (float)(int32_t)(a * (1.0f / FOC_TRIG_TWO_PI));
+        a -= n * FOC_TRIG_TWO_PI;
         if (a < 0.0f) {
             a += FOC_TRIG_TWO_PI;
         }
