@@ -2,8 +2,10 @@
  * cal_abi_align.h —— ABZ 相位校准插件（CalibrationOps.phase 的一个实现）
  *
  * 综合三家做法（对齐 VESC/ODrive/SimpleFOC）：
- *   ① 方向检测：施加正向旋转电压一圈，比较机械角增减 → 判定 inverted
- *      （§3.6 约定：编码器增大 = 电角度增大；读数随电角度增而减 → inverted=true）
+ *   ① 方向检测：电角度小步正扫 N 步 → 回基准 → 反扫 N 步，比较机械角增减 → 判定 inverted
+ *      （SimpleFOC alignSensor 式：不转满一圈——限流/负载下转子转不满一圈会使原整圈方案
+ *        失败；小步只要求正反扫机械角都移动且方向相反。
+ *        同时用小步移动量校验极对数：正扫电角度 N·step 对应机械角 N·step/pp）
  *   ② 相位对齐：施加固定电角度 θ_align 矢量，等转子对齐，读机械角 → 反推 encoder_zero
  *      （电角度 = mech·pp + zero → zero = θ_align − mech_eff·pp，mech_eff 含 inverted 校正）
  *
@@ -38,15 +40,16 @@ typedef struct {
     float    align_voltage;    /* 对齐电压 [V]（V0.1 电压模式），>0 */
     float    align_theta_rad;  /* 对齐电角度 [rad]，默认 0（§3.6 约定基准） */
     uint32_t align_dwell_ms;   /* 对齐稳定等待 [ms]，默认 700 */
-    uint32_t scan_step_ms;     /* 方向检测每步等待 [ms]，默认 5 */
-    uint32_t scan_steps;       /* 方向检测一圈步数，默认 500 */
-    float    min_move_rad;     /* 方向检测最小机械角移动量 [rad]，默认 0.05（防"没转"误判） */
-    float    pp_tol;           /* 响应/极对数校验相对容差，默认 0.05（±5%；SimpleFOC pp_check / ODrive calib_scan_response） */
+    uint32_t scan_step_ms;     /* 方向检测每步等待 [ms]，默认 20 */
+    uint32_t scan_steps;       /* 正/反扫各步数（不转一圈），默认 8 */
+    float    scan_step_rad;    /* 每步电角度增量 [rad]，默认 0.1（≈5.7°，正扫总弧 = scan_steps·scan_step_rad） */
+    float    min_move_rad;     /* 方向检测最小机械角移动量 [rad]，默认 0.02（防“没转”误判） */
+    float    pp_tol;           /* 极对数校验相对容差（小步移动 vs 期望 N·step/pp），默认 0.05（±5%） */
 
     /* 输出（phase 校准结果） */
     float    encoder_zero;     /* [rad]：电角度 = mech·pp + encoder_zero */
     bool     inverted;         /* 编码器方向反向？ */
-    bool     pp_ok;            /* 响应/极对数校验通过？（方向检测一圈机械角 ≈ 2π/pp） */
+    bool     pp_ok;            /* 极对数校验通过？（正扫机械角移动 ≈ scan_steps·scan_step_rad/pp） */
 } CalAbiAlignCtx;
 
 /* CalibrationOps.phase 实现（ctx = CalAbiAlignCtx*） */

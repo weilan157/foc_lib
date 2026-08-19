@@ -70,3 +70,12 @@ ControlMode command_buffer_get_mode(const CommandBuffer *cb)
     active = cb->index;
     return cb->data[active].mode;
 }
+
+float command_buffer_get_target(const CommandBuffer *cb)
+{
+    uint32_t active;
+
+    if (cb == NULL) { return 0.0f; }
+    active = cb->index;
+    return cb->data[active].target;   /* 非消耗：不更新 last_index，不影响 read 的 is_new 语义 */
+}

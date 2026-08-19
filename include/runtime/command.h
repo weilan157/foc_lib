@@ -32,6 +32,7 @@ int         command_buffer_write(CommandBuffer *cb, const MotorCommand *cmd);
 bool        command_buffer_read(CommandBuffer *cb, MotorCommand *out);   /* 保持型：无新命令→out=最近值，返回 false */
 int         command_buffer_set_mode(CommandBuffer *cb, ControlMode mode);
 ControlMode command_buffer_get_mode(const CommandBuffer *cb);
+float       command_buffer_get_target(const CommandBuffer *cb);           /* 非消耗读目标（不碰 last_index，供遥测/诊断） */
 
 #ifdef __cplusplus
 }
