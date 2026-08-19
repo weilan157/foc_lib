@@ -460,17 +460,20 @@ void debug_cli_stream_tick(DebugCli *c)
     c->stream_seq++;
 
     (void)feedback_buffer_read(&rt->fb_buf, &fb);
-    /* 目标速度（非消耗读命令缓冲；仅 VELOCITY 模式有意义）——
-       VOFA+ 调参：ch2=当前速度 mech_vel、ch3=目标速度 target_vel */
+    /* 目标位置/速度（非消耗读命令缓冲；按模式取）——
+       VOFA+ 调参：ch2=位置 mech_angle、ch3=目标位置 target_pos、
+       ch4=速度 mech_vel、ch5=目标速度 target_vel */
     {
+        float target_pos = 0.0f;
         float target_vel = 0.0f;
-        if (command_buffer_get_mode(&rt->cmd_buf) == CTRL_MODE_VELOCITY) {
-            target_vel = command_buffer_get_target(&rt->cmd_buf);
-        }
-        cli_printf(c, "%lu,%.6f,%.4f,%.4f,%.4f,%u,%.1f,%.1f,%lu\n",
+        ControlMode mode = command_buffer_get_mode(&rt->cmd_buf);
+        if (mode == CTRL_MODE_POSITION) { target_pos = command_buffer_get_target(&rt->cmd_buf); }
+        if (mode == CTRL_MODE_VELOCITY) { target_vel = command_buffer_get_target(&rt->cmd_buf); }
+        cli_printf(c, "%lu,%.6f,%.4f,%.4f,%.4f,%.4f,%u,%.1f,%.1f,%lu\n",
                    (unsigned long)rt->timestamp,
-                   (double)fb.mech_angle_rad, (double)fb.mech_vel_radps,
-                   (double)target_vel, (double)fb.elec_angle_rad,
+                   (double)fb.mech_angle_rad, (double)target_pos,
+                   (double)fb.mech_vel_radps, (double)target_vel,
+                   (double)fb.elec_angle_rad,
                    (unsigned)rt->state,
                    (rt->tel != NULL) ? (double)rt->tel->temperature_c : 0.0,
                    (rt->tel != NULL) ? (double)rt->tel->vbus_v : 0.0,
